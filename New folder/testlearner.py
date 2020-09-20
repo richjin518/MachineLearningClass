@@ -65,7 +65,7 @@ if __name__ == "__main__":
     print(f"{test_x.shape}")  		  	   		     		  		  		    	 		 		   		 		  
     print(f"{test_y.shape}")	  	   		     		  		  		    	 		 		   		 		  
 
-    """
+    
     # Experiment 1  
     num = 50
     leafsize = [i for i in range(1,num+1)]
@@ -87,8 +87,7 @@ if __name__ == "__main__":
     plt.grid(True, 'both')
     plt.legend(loc = 0)
     plt.savefig('Experiment1.png')
-    #plt.show()
-    """
+    plt.show()
 
     # Experiment 2
     num = 50
@@ -97,8 +96,8 @@ if __name__ == "__main__":
     rsme_test = []
     num_bags = 20
     for i in leafsize:
-        learner = bl.BagLearner(learner = dt.DTLearner, kwargs = {'leaf_size':i}, bags = num_bags, boost = False, verbose = False)
         print(i)
+        learner = bl.BagLearner(learner = dt.DTLearner, kwargs = {'leaf_size':i}, bags = num_bags, boost = False, verbose = False)
         learner.add_evidence(train_x, train_y)
         pred_train = learner.query(train_x)
         rsme_train.append(math.sqrt(((train_y - pred_train) ** 2).sum() / train_y.shape[0]))
@@ -114,7 +113,7 @@ if __name__ == "__main__":
     plt.legend(loc = 0)
     plt.savefig('Experiment2.png')
     plt.show()    
-"""		  	   		     		  		  		    	 		 		   		 		  
+    		  	   		     		  		  		    	 		 		   		 		  
     # create a learner and train it  		  	   		     		  		  		    	 		 		   		 		  
     learner = lrl.LinRegLearner(verbose=True)  # create a LinRegLearner  		  	   		     		  		  		    	 		 		   		 		  
     learner.add_evidence(train_x, train_y)  # train it  		  	   		     		  		  		    	 		 		   		 		  
@@ -137,4 +136,4 @@ if __name__ == "__main__":
     print(f"RMSE: {rmse}")  		  	   		     		  		  		    	 		 		   		 		  
     c = np.corrcoef(pred_y, y=test_y)  		  	   		     		  		  		    	 		 		   		 		  
     print(f"corr: {c[0,1]}")  	
-"""	  	   		     		  		  		    	 		 		   		 		  
+    """ """

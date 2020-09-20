@@ -30,9 +30,8 @@ class DTLearner(object):
         :param data_y: The value we are attempting to predict given the X data  		  	   		     		  		  		    	 		 		   		 		  
         :type data_y: numpy.ndarray  		  	   		     		  		  		    	 		 		   		 		  
         """  
+
         data = np.column_stack((data_x, data_y))
-        #print("Input Data:")
-        #print(data)
         self.DT = self.build_tree(data)        
         
         if self.verbose == True:
@@ -45,29 +44,31 @@ class DTLearner(object):
         num = len(data[0,:-1])
         index = 0
         
+        #print(np.sort(data[:,0].T))
+        #time.sleep(10)
         #print(data[:10])
         #print(len(data))
         #if len(data) <= 4:
-        print(data)
+        #print("my", data)
         #time.sleep(1)
         
         #time.sleep(2)
-        #if data.shape[0] <= self.leafsize:
-        #    return np.array([[-1, data[:,-1].mean(), "NA", "NA"]], dtype = object)
-        print("now: ", np.unique(data[:,-1]).shape[0])
-        if np.unique(data[:,-1]).shape[0] <= self.leafsize:
-            print("up")
-            return np.array([[-1, data[:,-1].mean(), "NA", "NA"]], dtype = object)
+        if data.shape[0] <= self.leafsize:
+            return np.array([[-1, data[:, -1].mean(), "NA", "NA"]], dtype = object)
+        #print("now: ", np.unique(data[:,-1]).shape[0])
+        if np.unique(data[:,-1]).shape[0] == 1:
+            return np.array([[-1, data[:, -1].mean(), "NA", "NA"]], dtype = object)
         else:
             #print(data[0,:-1], num)
             for i in range(num):
-                curr_corr = np.corrcoef(data[:,i], data[:,-1])
+                curr_corr = np.corrcoef(data[:,i], data[:,-1], rowvar = False)
                 #print(data[:,i], data[:,-1])
                 #print(i, data[:, i], data[:,-1], curr_corr)
-                if abs(curr_corr[1,0]) > maxcorr: #or abs(abs(curr_corr[1,0]) - maxcorr) < 1e-09:
+                if abs(curr_corr[-1,0]) > maxcorr: #or abs(abs(curr_corr[1,0]) - maxcorr) < 1e-09:
                     #print("in if 1 ", index, i, num)
                     #print(curr_corr, maxcorr)
-                    maxcorr = abs(curr_corr[1,0])
+                    maxcorr = abs(curr_corr[-1,0])
+                    #print(curr_corr)
                     index = i
                    # print("in if 2 ", index, i)
                 
@@ -75,11 +76,16 @@ class DTLearner(object):
             
           
             SplitVal = np.median(data[:,index])
-            print("final", index, maxcorr, SplitVal)
+            #print("final", index, maxcorr, SplitVal)
 
-            print("left")
+            #print("left")
+            newdata = data[data[:,index]<=SplitVal]
+            #print("unique: ", data.shape[0], len(np.unique(data[:,0])), data[:,0])
+            if newdata.shape[0] == 0 or newdata.shape[0] == data.shape[0]:
+                return np.array([[-1, data[:, -1].mean(), "NA", "NA"]], dtype = object) 
+
             lefttree = self.build_tree(data[data[:,index]<=SplitVal])
-            print("right")
+            #print("right")
             righttree = self.build_tree(data[data[:,index]>SplitVal])
             root = np.array([[index, SplitVal, 1, lefttree.shape[0] + 1]], dtype = object)
             return np.concatenate((root, lefttree, righttree))
@@ -116,3 +122,61 @@ if __name__ == "__main__":
     
     
     
+
+class DTLearner_2(object):
+    
+    def __init__(self, leaf_size = 1, tree = None, verbose = False):
+        self.leaf_size = leaf_size
+        self.tree = tree
+        self.verbose = verbose
+    
+    def author(self):
+        return 'yguan35'
+    
+    def add_evidence(self, Xtrain, Ytrain):
+        self.tree = self.fit(Xtrain, Ytrain)
+    
+    def fit(self, Xtrain, Ytrain):
+        if Xtrain.shape[0] <= self.leaf_size:
+            return np.array([['leaf', Ytrain.mean(axis=0), None, None]])
+        elif Ytrain.shape == Ytrain[Ytrain == Ytrain[0]].shape:
+            return np.array([['leaf', Ytrain[0], None, None]])
+        else:
+            m, n = Xtrain.shape
+            corr_max = 0
+            var_index = None
+            for i in range(n):
+                corr = abs(np.corrcoef(Xtrain[:,i],Ytrain,rowvar = False)[-1,0])
+                if corr > corr_max:
+                    corr_max = corr
+                    var_index = i
+            sorted_index = np.argsort(Xtrain[:,var_index])
+            Xtrain = Xtrain[sorted_index]
+            Ytrain = Ytrain[sorted_index]
+            splitval = np.median(Xtrain[:, var_index], axis = 0)
+            
+            if Xtrain[Xtrain[:,var_index]>splitval].shape[0] >0:
+                lefttree = self.fit(Xtrain[Xtrain[:,var_index]<=splitval], Ytrain[Xtrain[:,var_index]<=splitval])
+                righttree = self.fit(Xtrain[Xtrain[:,var_index]>splitval], Ytrain[Xtrain[:,var_index]>splitval])
+                root = [[var_index, splitval, 1, lefttree.shape[0]+1]]
+                return np.append(root, np.concatenate((lefttree,righttree), axis=0), axis=0)
+            else:
+                return np.array([['leaf', Ytrain.mean(axis=0), None, None]])
+                        
+    
+    def query(self, Xtest):
+        m, n = self.tree.shape
+        j, k = Xtest.shape
+        result = []
+        for j in range(j):
+            i = 0
+            while i < m:
+                if self.tree[i, 0] == 'leaf' and self.tree[i,2] is None and self.tree[i,3] is None:
+                    result.append(self.tree[i,1])
+                    break
+                else:
+                    if Xtest[j, int(self.tree[i,0])] <= self.tree[i,1]:
+                        i += int(self.tree[i,2])
+                    else:
+                        i += int(self.tree[i,3])
+        return np.array(result)
